@@ -1,0 +1,23 @@
+version: "3.3"
+
+services:
+ music:
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+    restart: always
+    volumes:
+      - data:/data
+    environment:
+      - TOKEN_STORAGE_PATH=/data
+      - SPOTIFY_CLIENT_ID
+      - SPOTIFY_CLIENT_SECRET
+      - SPOTIFY_REDIRECT_URL
+      - TELEGRAM_API_TOKEN
+      - TELEGRAM_BOT_USERNAME
+    ports:
+      - "127.0.0.1:9999:9999"
+
+
+volumes:
+  data:

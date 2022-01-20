@@ -1,0 +1,17 @@
+<configuration scan="true" scanPeriod="30 seconds">
+    <property name="LOGGING_LEVEL" value="${logging.level:-INFO}"/>
+    <property name="STDOUT_APPENDER_NAME" value="${logging.stdoutAppenderName:-application-stdout}"/>
+
+    <appender name="application-stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>utf8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%mdc] %highlight(%-5level) %cyan(%-20.40logger{39}) : %message%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="${STDOUT_APPENDER_NAME}"/>
+    </root>
+
+</configuration>
