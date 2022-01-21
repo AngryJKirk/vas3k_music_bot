@@ -50,6 +50,7 @@ fun main() {
                 )
                     .build()
                 spotifyClientHolder.client = client
+                logger.info("Recreated client from stored creds")
             }
         }.onFailure {
             logger.error("Failed to create client on start", it)
