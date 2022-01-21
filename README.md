@@ -3,6 +3,7 @@
 This bot uses [Odesil API](https://odesli.co/) to parse music links.
 It also creates a playlist in Spotify every month and automatically adds all songs there.
 
+The bot uses ~~white~~ allow list, so you must fill in the values in `Main.kt` to use it in your own chat.
 
 To run the bot you should fill in all variables in `.env` and run `make deploy-test`
 To recreate the bot you should use `make redeploy-test`.
