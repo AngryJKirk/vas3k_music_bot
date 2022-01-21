@@ -30,7 +30,18 @@ class TokenStorage(private val tokenStoragePath: String) {
     }
 
     fun tokenRefreshOption(): SpotifyApiOptions.() -> Unit =
-        { afterTokenRefresh = { saveToken(it.token) } }
+        {
+            afterTokenRefresh = {
+                val token = if (it.token.refreshToken == null) {
+                    logger.info("New refresh token is null, using previous one")
+                    it.token.copy(refreshToken = getToken()?.refreshToken)
+                } else {
+                    logger.info("New refresh token exists, updating")
+                    it.token
+                }
+                saveToken(token)
+            }
+        }
 
     private fun getFile(): File {
         return Path("$tokenStoragePath/spotify.token").toFile()

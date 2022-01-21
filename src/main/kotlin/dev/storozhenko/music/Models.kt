@@ -24,3 +24,9 @@ class OdesilEntityData(
     @JsonProperty("artistName") val artistName: String?
 )
 
+class SpotifyCredentials(
+    val clientId: String,
+    val clientSecret: String,
+    val redirectUri: String
+)
+

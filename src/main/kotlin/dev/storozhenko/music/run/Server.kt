@@ -4,6 +4,7 @@ import com.adamratzman.spotify.SpotifyScope
 import com.adamratzman.spotify.SpotifyUserAuthorization
 import com.adamratzman.spotify.getSpotifyAuthorizationUrl
 import com.adamratzman.spotify.spotifyClientApi
+import dev.storozhenko.music.SpotifyCredentials
 import dev.storozhenko.music.services.SpotifyService
 import dev.storozhenko.music.services.TokenStorage
 import io.ktor.application.call
@@ -17,9 +18,7 @@ import io.ktor.util.getOrFail
 class Server(
     private val tokenStorage: TokenStorage,
     private val spotifyService: SpotifyService,
-    private val clientId: String,
-    private val clientSecret: String,
-    private val redirectUri: String
+    private val spotifyCredentials: SpotifyCredentials
 ) {
 
     fun run() {
@@ -32,17 +31,17 @@ class Server(
                         SpotifyScope.PLAYLIST_MODIFY_PUBLIC,
                         SpotifyScope.PLAYLIST_MODIFY_PRIVATE,
                         SpotifyScope.PLAYLIST_READ_COLLABORATIVE,
-                        clientId = clientId,
-                        redirectUri = redirectUri
+                        clientId = spotifyCredentials.clientId,
+                        redirectUri = spotifyCredentials.redirectUri
                     )
                     call.respondRedirect(url, permanent = false)
                 }
                 get("/callback") {
                     val authCode = call.request.queryParameters.getOrFail("code")
                     val client = spotifyClientApi(
-                        clientId,
-                        clientSecret,
-                        redirectUri,
+                        spotifyCredentials.clientId,
+                        spotifyCredentials.clientSecret,
+                        spotifyCredentials.redirectUri,
                         SpotifyUserAuthorization(authorizationCode = authCode),
                         tokenStorage.tokenRefreshOption()
                     ).build()

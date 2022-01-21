@@ -1,20 +1,51 @@
 package dev.storozhenko.music.services
 
 import com.adamratzman.spotify.SpotifyClientApi
+import com.adamratzman.spotify.SpotifyUserAuthorization
 import com.adamratzman.spotify.models.PagingObject
 import com.adamratzman.spotify.models.PlaylistTrack
 import com.adamratzman.spotify.models.SpotifyTrackUri
+import com.adamratzman.spotify.spotifyClientApi
 import dev.storozhenko.music.OdesilResponse
+import dev.storozhenko.music.SpotifyCredentials
 import dev.storozhenko.music.SpotifyPlaylist
 import dev.storozhenko.music.getLogger
+import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
 
 class SpotifyService(
-    var client: SpotifyClientApi? = null
+    private val tokenStorage: TokenStorage,
+    private val spotifyCredentials: SpotifyCredentials,
+    var client: SpotifyClientApi? = null,
 ) {
     private val logger = getLogger()
+
+    init {
+        runBlocking {
+            client = runCatching {
+                val previousToken = tokenStorage.getToken()
+                if (previousToken != null) {
+                    val client = spotifyClientApi(
+                        spotifyCredentials.clientId,
+                        spotifyCredentials.clientSecret,
+                        spotifyCredentials.redirectUri,
+                        SpotifyUserAuthorization(token = previousToken),
+                        tokenStorage.tokenRefreshOption()
+                    ).build()
+                    logger.info("Recreated client from stored credentials")
+                    client
+                } else {
+                    null
+                }
+            }.getOrElse {
+                logger.error("Failed to create client on start", it)
+                null
+            }
+        }
+    }
+
     fun isReady(): Boolean {
         return client != null
     }
