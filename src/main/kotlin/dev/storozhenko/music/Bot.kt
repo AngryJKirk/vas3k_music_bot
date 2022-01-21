@@ -82,7 +82,9 @@ class Bot(
             }
             links.add(mapOdesilResponse(odesilResponse))
             coroutine.launch {
-                runCatching { updatePlaylist(chatId, odesilResponse) }
+                val addEntireAlbum = update.message.entities
+                    .any { it.type == "hashtag" && it.text == "#вплейлист" }
+                runCatching { updatePlaylist(chatId, odesilResponse, addEntireAlbum) }
                     .onFailure { logger.error("Failed to update playlist:", it) }
             }
         }
@@ -152,17 +154,46 @@ class Bot(
             }.joinToString(separator = " | ")
     }
 
-    private suspend fun updatePlaylist(chatId: Long, odesilResponse: OdesilResponse) {
+    private suspend fun updatePlaylist(chatId: Long, odesilResponse: OdesilResponse, addEntireAlbum: Boolean) {
         val spotifyUrl = odesilResponse.linksByPlatform["spotify"]?.url ?: return
-        if (!spotifyUrl.contains("track")) {
-            return
-        }
         val client = getSpotifyClient()
-        val playlistData = getCurrentPlaylist(chatId)
-        val track = SpotifyTrackUri(spotifyUrl.split("/").last())
-        if (playlistData.tracks.none { it?.track?.id == track.id }) {
-            client.playlists.addPlayableToClientPlaylist(playlistData.id, track)
+        val playableId = spotifyUrl.split("/").last()
+
+        if (spotifyUrl.contains("track")) {
+            addTrack(playableId, chatId = chatId)
+        } else if (spotifyUrl.contains("album")) {
+            val trackIds = client
+                .albums
+                .getAlbumTracks(playableId)
+                .mapNotNull { track -> track?.id }
+                .toTypedArray()
+            if (addEntireAlbum) {
+                addTrack(*trackIds, chatId = chatId)
+            } else {
+                val mostPopular = client
+                    .tracks
+                    .getTracks(*trackIds)
+                    .maxByOrNull { it?.popularity ?: 0 }
+
+                if (mostPopular != null) {
+                    addTrack(mostPopular.id, chatId = chatId)
+                }
+            }
         }
+    }
+
+    private suspend fun addTrack(vararg trackIds: String, chatId: Long) {
+        val playlistData = getCurrentPlaylist(chatId)
+        val existingTracks = playlistData
+            .tracks
+            .mapNotNull { it?.track?.id }
+            .toSet()
+        val newTracks = trackIds
+            .filterNot { trackId -> existingTracks.contains(trackId) }
+            .map(::SpotifyTrackUri)
+            .toTypedArray()
+        getSpotifyClient().playlists
+            .addPlayablesToClientPlaylist(playlistData.id, *newTracks)
     }
 
     private fun getCurrentPlaylistName(chatId: Long): String {

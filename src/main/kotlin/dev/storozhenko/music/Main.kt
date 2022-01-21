@@ -26,7 +26,8 @@ private val botToken = getEnv("TELEGRAM_API_TOKEN")
 private val botUsername = getEnv("TELEGRAM_BOT_USERNAME")
 private val tokenStoragePath = getEnv("TOKEN_STORAGE_PATH")
 private val whiteListChatsAndPlaylistNames = mapOf(
-    -1001430847921L to "Vas3k.Music"
+    -1001430847921L to "Vas3k.Music",
+    138265855L to "Test"
 )
 
 private val logger = LoggerFactory.getLogger("main")
@@ -45,7 +46,7 @@ fun main() {
                     clientId,
                     clientSecret,
                     redirectUri,
-                    previousToken,
+                    SpotifyUserAuthorization(token = previousToken),
                     tokenRefreshOption
                 )
                     .build()
