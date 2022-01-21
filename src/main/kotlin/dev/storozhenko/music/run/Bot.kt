@@ -1,28 +1,33 @@
-package dev.storozhenko.music
+package dev.storozhenko.music.run
 
-import com.adamratzman.spotify.SpotifyClientApi
-import com.adamratzman.spotify.models.Playlist
-import com.adamratzman.spotify.models.SpotifyTrackUri
+import dev.storozhenko.music.OdesilResponse
+import dev.storozhenko.music.capitalize
+import dev.storozhenko.music.getLogger
+import dev.storozhenko.music.services.OdesilService
+import dev.storozhenko.music.services.SpotifyService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
+import org.telegram.telegrambots.meta.api.objects.MessageEntity
 import org.telegram.telegrambots.meta.api.objects.Update
-import java.time.LocalDate
-import java.time.format.TextStyle
-import java.util.Locale
+import java.nio.charset.Charset
 
 class Bot(
     private val token: String,
     private val botName: String,
-    private val spotifyClientHolder: SpotifyClientHolder,
+    private val spotifyService: SpotifyService,
     private val chatsAndPlaylistNames: Map<Long, String>
 ) : TelegramLongPollingBot() {
-    private val odesil = Odesil()
+    private val odesilService = OdesilService()
     private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
+    private val helpMessage = this::class.java.classLoader
+        .getResourceAsStream("help_message.txt")
+        ?.readAllBytes()
+        ?.toString(Charset.defaultCharset()) ?: "разработчик еблан забыл добавить хелп"
 
     override fun getBotToken() = token
 
@@ -42,7 +47,7 @@ class Bot(
             return
         }
 
-        if (spotifyClientHolder.client == null) {
+        if (!spotifyService.isReady()) {
             execute(
                 SendMessage(
                     chatId.toString(),
@@ -51,29 +56,29 @@ class Bot(
             )
         }
 
-        val commandEntity = update.message.entities.firstOrNull { entity -> entity.type == "bot_command" }?.text
+        val entities = update.message.entities
+        val command = getCommand(entities)
 
-        if (commandEntity != null && (!commandEntity.contains("@") || commandEntity.contains(botName))
-        ) {
+        if (command != null) {
             coroutine.launch {
-                runCatching { processCommands(update, commandEntity.split("@").first()) }
-                    .onFailure {
-                        logger.error("Can't process command for $update", it)
-                    }
+                runCatching {
+                    processCommands(update, command)
+                }.onFailure {
+                    logger.error("Can't process command for $update", it)
+                }
             }
             return
         }
 
         var initialMessage = update.message.text
-        val urlEntities = update.message.entities
-            .filter { entity -> entity.type == "url" }
+        val urlEntities = entities.filter { entity -> entity.type == "url" }
         if (urlEntities.isEmpty()) {
             return
         }
         var i = 1
         val links = mutableListOf<String>()
         for (entity in urlEntities) {
-            val odesilResponse = odesil.detect(entity.text) ?: continue
+            val odesilResponse = odesilService.detect(entity.text) ?: continue
             if (entity.offset == 0 && entity.length == initialMessage.length) {
                 initialMessage = ""
             } else {
@@ -82,9 +87,15 @@ class Bot(
             }
             links.add(mapOdesilResponse(odesilResponse))
             coroutine.launch {
-                val addEntireAlbum = update.message.entities
+                val addEntireAlbum = entities
                     .any { it.type == "hashtag" && it.text == "#вплейлист" }
-                runCatching { updatePlaylist(chatId, odesilResponse, addEntireAlbum) }
+                runCatching {
+                    spotifyService.updatePlaylist(
+                        getPlaylistNamePrefix(chatId),
+                        odesilResponse,
+                        addEntireAlbum
+                    )
+                }
                     .onFailure { logger.error("Failed to update playlist:", it) }
             }
         }
@@ -109,15 +120,20 @@ class Bot(
         when (command) {
             "/current_playlist" -> sendCurrentPlaylist(update)
             "/all_playlists" -> sendAllPlaylists(update)
+            "/help" -> sendHelp(update)
         }
+    }
+
+    private fun sendHelp(update: Update) {
+        execute(SendMessage(update.message.chatId.toString(), helpMessage))
     }
 
     private suspend fun sendCurrentPlaylist(update: Update) {
         val chatId = update.message.chatId
-        val currentPlaylist = getCurrentPlaylist(chatId)
+        val playlist = spotifyService.getCurrentPlaylist(getPlaylistNamePrefix(chatId))
         execute(
             SendMessage(
-                chatId.toString(), "<a href=\"${getProperPlaylistUrl(currentPlaylist.id)}\">${currentPlaylist.name}</a>"
+                chatId.toString(), "<a href=\"${playlist.url}\">${playlist.name}</a>"
             ).apply {
                 replyToMessageId = update.message.messageId
                 enableHtml(true)
@@ -126,9 +142,10 @@ class Bot(
     }
 
     private suspend fun sendAllPlaylists(update: Update) {
-        val playlists = getSpotifyClient().playlists.getClientPlaylists()
+        val playlistNamePrefix = getPlaylistNamePrefix(update.message.chatId)
+        val playlists = spotifyService.getAllPlaylists(playlistNamePrefix)
         val message = playlists.mapIndexed { i, p ->
-            "${i + 1}. <a href=\"${getProperPlaylistUrl(p?.id)}\">${p?.name}</a>"
+            "${i + 1}. <a href=\"${p.url}\">${p.name}</a>"
         }.joinToString(separator = "\n")
         execute(
             SendMessage(
@@ -154,72 +171,17 @@ class Bot(
             }.joinToString(separator = " | ")
     }
 
-    private suspend fun updatePlaylist(chatId: Long, odesilResponse: OdesilResponse, addEntireAlbum: Boolean) {
-        val spotifyUrl = odesilResponse.linksByPlatform["spotify"]?.url ?: return
-        val client = getSpotifyClient()
-        val playableId = spotifyUrl.split("/").last()
-
-        if (spotifyUrl.contains("track")) {
-            addTrack(playableId, chatId = chatId)
-        } else if (spotifyUrl.contains("album")) {
-            val trackIds = client
-                .albums
-                .getAlbumTracks(playableId)
-                .mapNotNull { track -> track?.id }
-                .toTypedArray()
-            if (addEntireAlbum) {
-                addTrack(*trackIds, chatId = chatId)
-            } else {
-                val mostPopular = client
-                    .tracks
-                    .getTracks(*trackIds)
-                    .maxByOrNull { it?.popularity ?: 0 }
-
-                if (mostPopular != null) {
-                    addTrack(mostPopular.id, chatId = chatId)
-                }
-            }
-        }
-    }
-
-    private suspend fun addTrack(vararg trackIds: String, chatId: Long) {
-        val playlistData = getCurrentPlaylist(chatId)
-        val existingTracks = playlistData
-            .tracks
-            .mapNotNull { it?.track?.id }
-            .toSet()
-        val newTracks = trackIds
-            .filterNot { trackId -> existingTracks.contains(trackId) }
-            .map(::SpotifyTrackUri)
-            .toTypedArray()
-        getSpotifyClient().playlists
-            .addPlayablesToClientPlaylist(playlistData.id, *newTracks)
-    }
-
-    private fun getCurrentPlaylistName(chatId: Long): String {
-        val prefix = chatsAndPlaylistNames[chatId]
+    private fun getPlaylistNamePrefix(chatId: Long): String {
+        return chatsAndPlaylistNames[chatId]
             ?: throw IllegalStateException("Playlist name is not found for chat $chatId")
-        val now = LocalDate.now()
-        val currentMonth = now.month.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-        val currentYear = now.year
-        return "$prefix, $currentMonth $currentYear"
     }
 
-    private fun getSpotifyClient(): SpotifyClientApi {
-        return spotifyClientHolder.client ?: throw IllegalStateException("Should be checked before")
-    }
-
-    private suspend fun getCurrentPlaylist(chatId: Long): Playlist {
-        val playlistName = getCurrentPlaylistName(chatId)
-        val spotifyClient = getSpotifyClient()
-
-        val playlist = spotifyClient.playlists.getClientPlaylists().find { it?.name == playlistName }?.id
-            ?: spotifyClient.playlists.createClientPlaylist(playlistName, public = true).id
-        return spotifyClient.playlists.getPlaylist(playlist)
-            ?: throw IllegalStateException("Playlist must be there")
-    }
-
-    private fun getProperPlaylistUrl(playlistId: String?): String {
-        return "https://open.spotify.com/playlist/$playlistId"
+    private fun getCommand(entities: List<MessageEntity>): String? {
+        val entityText = entities.firstOrNull { entity -> entity.type == "bot_command" }?.text
+        return if (entityText != null && (!entityText.contains("@") || entityText.contains(botName)))
+            entityText.split("@").first()
+        else {
+            null
+        }
     }
 }

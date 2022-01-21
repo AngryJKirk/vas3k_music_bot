@@ -1,6 +1,8 @@
-package dev.storozhenko.music
+package dev.storozhenko.music.services
 
+import com.adamratzman.spotify.SpotifyApiOptions
 import com.adamratzman.spotify.models.Token
+import dev.storozhenko.music.getLogger
 import kotlinx.serialization.json.Json
 import java.io.File
 import kotlin.io.path.Path
@@ -26,6 +28,9 @@ class TokenStorage(private val tokenStoragePath: String) {
         }
         return result.getOrNull()
     }
+
+    fun tokenRefreshOption(): SpotifyApiOptions.() -> Unit =
+        { afterTokenRefresh = { saveToken(it.token) } }
 
     private fun getFile(): File {
         return Path("$tokenStoragePath/spotify.token").toFile()
