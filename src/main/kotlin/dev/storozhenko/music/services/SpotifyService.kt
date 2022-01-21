@@ -1,7 +1,9 @@
 package dev.storozhenko.music.services
 
 import com.adamratzman.spotify.SpotifyClientApi
+import com.adamratzman.spotify.SpotifyScope
 import com.adamratzman.spotify.SpotifyUserAuthorization
+import com.adamratzman.spotify.getSpotifyAuthorizationUrl
 import com.adamratzman.spotify.models.PagingObject
 import com.adamratzman.spotify.models.PlaylistTrack
 import com.adamratzman.spotify.models.SpotifyTrackUri
@@ -27,13 +29,7 @@ class SpotifyService(
             client = runCatching {
                 val previousToken = tokenStorage.getToken()
                 if (previousToken != null) {
-                    val client = spotifyClientApi(
-                        spotifyCredentials.clientId,
-                        spotifyCredentials.clientSecret,
-                        spotifyCredentials.redirectUri,
-                        SpotifyUserAuthorization(token = previousToken),
-                        tokenStorage.tokenRefreshOption()
-                    ).build()
+                    val client = createClientInternal(SpotifyUserAuthorization(token = previousToken))
                     logger.info("Recreated client from stored credentials")
                     client
                 } else {
@@ -44,6 +40,24 @@ class SpotifyService(
                 null
             }
         }
+    }
+
+    fun getAuthUrl(): String {
+        return getSpotifyAuthorizationUrl(
+            SpotifyScope.PLAYLIST_READ_PRIVATE,
+            SpotifyScope.PLAYLIST_MODIFY_PRIVATE,
+            SpotifyScope.PLAYLIST_MODIFY_PUBLIC,
+            SpotifyScope.PLAYLIST_MODIFY_PRIVATE,
+            SpotifyScope.PLAYLIST_READ_COLLABORATIVE,
+            clientId = spotifyCredentials.clientId,
+            redirectUri = spotifyCredentials.redirectUri
+        )
+    }
+
+    suspend fun createClient(userAuthorization: SpotifyUserAuthorization) {
+        val clientApi = createClientInternal(userAuthorization)
+        tokenStorage.saveToken(clientApi.token)
+        this.client = clientApi
     }
 
     fun isReady(): Boolean {
@@ -155,5 +169,15 @@ class SpotifyService(
 
     private fun getSpotifyClient(): SpotifyClientApi {
         return client ?: throw IllegalStateException("Should be checked before")
+    }
+
+    private suspend fun createClientInternal(userAuthorization: SpotifyUserAuthorization): SpotifyClientApi {
+        return spotifyClientApi(
+            spotifyCredentials.clientId,
+            spotifyCredentials.clientSecret,
+            spotifyCredentials.redirectUri,
+            userAuthorization,
+            tokenStorage.tokenRefreshOption()
+        ).build()
     }
 }

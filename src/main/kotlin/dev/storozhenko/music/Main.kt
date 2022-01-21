@@ -25,7 +25,7 @@ fun main() {
     val telegramBotsApi = TelegramBotsApi(DefaultBotSession::class.java)
     val tokenStorage = TokenStorage(tokenStoragePath)
     val spotifyService = SpotifyService(tokenStorage, spotifyCredentials)
-    val server = Server(tokenStorage, spotifyService, spotifyCredentials)
+    val server = Server(spotifyService)
     telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService, whiteListChatsAndPlaylistNames))
     server.run()
 }
