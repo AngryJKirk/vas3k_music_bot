@@ -115,7 +115,7 @@ class Bot(
         val currentPlaylist = getCurrentPlaylist(chatId)
         execute(
             SendMessage(
-                chatId.toString(), "<a href=\"${currentPlaylist.href}\">${currentPlaylist.name}</a>"
+                chatId.toString(), "<a href=\"${getProperPlaylistUrl(currentPlaylist.id)}\">${currentPlaylist.name}</a>"
             ).apply {
                 replyToMessageId = update.message.messageId
                 enableHtml(true)
@@ -126,7 +126,7 @@ class Bot(
     private suspend fun sendAllPlaylists(update: Update) {
         val playlists = getSpotifyClient().playlists.getClientPlaylists()
         val message = playlists.mapIndexed { i, p ->
-            "${i + 1}. <a href=\"${p?.href}\">${p?.name}</a>"
+            "${i + 1}. <a href=\"${getProperPlaylistUrl(p?.id)}\">${p?.name}</a>"
         }.joinToString(separator = "\n")
         execute(
             SendMessage(
@@ -186,5 +186,9 @@ class Bot(
             ?: spotifyClient.playlists.createClientPlaylist(playlistName, public = true).id
         return spotifyClient.playlists.getPlaylist(playlist)
             ?: throw IllegalStateException("Playlist must be there")
+    }
+
+    private fun getProperPlaylistUrl(playlistId: String?): String {
+        return "https://open.spotify.com/playlist/$playlistId"
     }
 }
