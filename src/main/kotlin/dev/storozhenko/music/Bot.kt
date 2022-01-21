@@ -86,7 +86,9 @@ class Bot(
                     .onFailure { logger.error("Failed to update playlist:", it) }
             }
         }
-
+        if (links.isEmpty()) {
+            return
+        }
         val from = update.message.from.userName
         val fromId = update.message.from.id
         val linksMessage = if (links.size == 1) {
