@@ -13,8 +13,6 @@ RUN mvn package -DskipTests
 
 FROM openjdk:17-jdk-slim
 
-ENV SPRING_PROFILES_ACTIVE production
-
 COPY --from=build /app/target/vas3k_music.jar /usr/local/lib/vas3k_music.jar
 
 ENTRYPOINT ["java","-jar","/usr/local/lib/vas3k_music.jar"]
