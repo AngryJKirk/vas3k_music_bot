@@ -1,7 +1,6 @@
 package dev.storozhenko.music.run
 
 import dev.storozhenko.music.OdesilResponse
-import dev.storozhenko.music.capitalize
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.OdesilService
 import dev.storozhenko.music.services.SpotifyService
@@ -159,32 +158,31 @@ class Bot(
     }
 
     private val platformOrder = listOf(
-        "spotify",
-        "yandex",
-        "appleMusic",
-        "itunes",
-        "youtube",
-        "youtubeMusic",
-        "google",
-        "googleStore",
-        "pandora",
-        "deezer",
-        "tidal",
-        "amazonStore",
-        "amazonMusic",
-        "soundcloud",
-        "napster",
-        "spinrilla",
-        "audius"
+        "spotify" to "Spotify",
+        "yandex" to "Yandex.Music",
+        "appleMusic" to "Apple Music",
+        "itunes" to "iTunes",
+        "youtube" to "YouTube",
+        "youtubeMusic" to "YouTube Music",
+        "google" to "Google",
+        "googleStore" to "Google Store",
+        "pandora" to "Pandora",
+        "deezer" to "Deezer",
+        "tidal" to "Tidal",
+        "amazonStore" to "Amazon Store",
+        "amazonMusic" to "Amazon Music",
+        "soundcloud" to "SoundCloud",
+        "napster" to "Napster",
+        "spinrilla" to "Spinrilla",
+        "audius" to "Audius"
     )
 
     private fun mapOdesilResponse(odesilResponse: OdesilResponse): String {
         val odesilEntityData = odesilResponse.entitiesByUniqueId[odesilResponse.entityUniqueId]
         val title = odesilEntityData?.title ?: ""
         val artistName = odesilEntityData?.artistName ?: ""
-        val platforms = platformOrder.mapNotNull { platformName ->
-            odesilResponse.linksByPlatform[platformName]
-                ?.let { platformData -> capitalize(platformName) to platformData }
+        val platforms = platformOrder.mapNotNull { (platformId, platformName) ->
+            odesilResponse.linksByPlatform[platformId]?.let { platformData -> platformName to platformData }
         }
         val songName = "$artistName - $title\n"
         return songName + platforms.joinToString(separator = " | ")
