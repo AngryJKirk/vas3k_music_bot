@@ -1,10 +1,13 @@
 package dev.storozhenko.music.services
 
 import com.adamratzman.spotify.SpotifyApiOptions
+import com.adamratzman.spotify.SpotifyClientApi
 import com.adamratzman.spotify.models.Token
+import com.adamratzman.spotify.refreshSpotifyClientToken
 import dev.storozhenko.music.getLogger
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.lang.IllegalStateException
 import kotlin.io.path.Path
 
 class TokenStorage(private val tokenStoragePath: String) {
@@ -31,13 +34,29 @@ class TokenStorage(private val tokenStoragePath: String) {
 
     fun tokenRefreshOption(): SpotifyApiOptions.() -> Unit =
         {
-            afterTokenRefresh = {
-                val token = if (it.token.refreshToken == null) {
+            refreshTokenProducer = { api ->
+                logger.info("Refreshing token")
+                val currentToken = api.token
+                val refreshedToken = refreshSpotifyClientToken(
+                    api.clientId ?: throw IllegalStateException("ClientId must be present"),
+                    api.clientSecret,
+                    api.token.refreshToken,
+                    false
+                )
+                if (refreshedToken.refreshToken == null) {
+                    logger.info("Refresh token is null, keeping previous one")
+                    refreshedToken.refreshToken = currentToken.refreshToken
+                }
+                refreshedToken
+
+            }
+            afterTokenRefresh = { api ->
+                val token = if (api.token.refreshToken == null) {
                     logger.info("New refresh token is null, using previous one")
-                    it.token.copy(refreshToken = getToken()?.refreshToken)
+                    api.token.copy(refreshToken = getToken()?.refreshToken)
                 } else {
                     logger.info("New refresh token exists, updating")
-                    it.token
+                    api.token
                 }
                 saveToken(token)
             }
