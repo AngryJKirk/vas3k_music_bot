@@ -1,5 +1,8 @@
 package dev.storozhenko.music.run
 
+import com.adamratzman.spotify.utils.Language
+import com.sun.tools.javac.jvm.ByteCodes.ret
+import dev.storozhenko.music.OdesilPlatformData
 import dev.storozhenko.music.OdesilResponse
 import dev.storozhenko.music.capitalize
 import dev.storozhenko.music.getLogger
@@ -158,17 +161,37 @@ class Bot(
         )
     }
 
+    private val platformOrder = listOf(
+        "spotify",
+        "yandex",
+        "appleMusic",
+        "itunes",
+        "youtube",
+        "youtubeMusic",
+        "google",
+        "googleStore",
+        "pandora",
+        "deezer",
+        "tidal",
+        "amazonStore",
+        "amazonMusic",
+        "soundcloud",
+        "napster",
+        "spinrilla",
+        "audius"
+    )
+
     private fun mapOdesilResponse(odesilResponse: OdesilResponse): String {
         val odesilEntityData = odesilResponse.entitiesByUniqueId[odesilResponse.entityUniqueId]
         val title = odesilEntityData?.title ?: ""
         val artistName = odesilEntityData?.artistName ?: ""
-        return "$artistName - $title\n" + odesilResponse
-            .linksByPlatform
-            .map {
-                val platformName = capitalize(it.key)
-                val link = it.value.url
-                "<a href=\"${link}\">${platformName}</a>"
-            }.joinToString(separator = " | ")
+        val platforms = platformOrder.mapNotNull { platformName ->
+            odesilResponse.linksByPlatform[platformName]
+                ?.let { platformData -> capitalize(platformName) to platformData }
+        }
+        val songName = "$artistName - $title\n"
+        return songName + platforms.joinToString(separator = " | ")
+        { (platformName, platformData) -> "<a href=\"${platformData.url}\">${platformName}</a>" }
     }
 
     private fun getPlaylistNamePrefix(chatId: Long): String {
