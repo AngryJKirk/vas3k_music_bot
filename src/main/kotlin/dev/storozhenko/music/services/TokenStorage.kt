@@ -5,6 +5,8 @@ import com.adamratzman.spotify.SpotifyClientApi
 import com.adamratzman.spotify.models.Token
 import com.adamratzman.spotify.refreshSpotifyClientToken
 import dev.storozhenko.music.getLogger
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.lang.IllegalStateException
@@ -15,21 +17,22 @@ class TokenStorage(private val tokenStoragePath: String) {
 
     fun saveToken(token: Token) {
         getFile().writeText(Json.encodeToString(Token.serializer(), token))
+        logger.info("Token saved")
     }
 
     fun getToken(): Token? {
         val file = getFile()
         if (!file.exists()) {
+            logger.info("Token does not exist")
             return null
         }
-        val result = runCatching {
+        return runCatching {
             Json.decodeFromString(Token.serializer(), file.readText())
-        }
-        if (result.isFailure) {
-            logger.error("Token deserialization error", result.exceptionOrNull())
+        }.getOrElse { exception ->
+            logger.error("Token deserialization error", exception)
             file.delete()
+            null
         }
-        return result.getOrNull()
     }
 
     fun tokenRefreshOption(): SpotifyApiOptions.() -> Unit =
@@ -47,18 +50,8 @@ class TokenStorage(private val tokenStoragePath: String) {
                     logger.info("Refresh token is null, keeping previous one")
                     refreshedToken.refreshToken = currentToken.refreshToken
                 }
+                coroutineScope { launch { saveToken(refreshedToken) } }
                 refreshedToken
-
-            }
-            afterTokenRefresh = { api ->
-                val token = if (api.token.refreshToken == null) {
-                    logger.info("New refresh token is null, using previous one")
-                    api.token.copy(refreshToken = getToken()?.refreshToken)
-                } else {
-                    logger.info("New refresh token exists, updating")
-                    api.token
-                }
-                saveToken(token)
             }
         }
 
