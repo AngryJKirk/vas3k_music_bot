@@ -1,6 +1,7 @@
 package dev.storozhenko.music.run
 
 import dev.storozhenko.music.OdesilResponse
+import dev.storozhenko.music.asResource
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.OdesilService
 import dev.storozhenko.music.services.SpotifyService
@@ -12,7 +13,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.MessageEntity
 import org.telegram.telegrambots.meta.api.objects.Update
-import java.nio.charset.Charset
 
 class Bot(
     private val token: String,
@@ -23,11 +23,7 @@ class Bot(
     private val odesilService = OdesilService()
     private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
-    private val helpMessage = this::class.java.classLoader
-        .getResourceAsStream("help_message.txt")
-        ?.readAllBytes()
-        ?.toString(Charset.defaultCharset()) ?: "разработчик еблан забыл добавить хелп"
-
+    private val helpMessage = "help_message.txt".asResource()
     override fun getBotToken() = token
 
     override fun getBotUsername() = botName

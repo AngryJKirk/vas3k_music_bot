@@ -1,0 +1,12 @@
+{
+  "allowed_list": [
+    {
+      "chat_id": -1001430847921,
+      "playlist_prefix": "Vas3k.Music"
+    },
+    {
+      "chat_id": 138265855,
+      "playlist_prefix": "Test"
+    }
+  ]
+}

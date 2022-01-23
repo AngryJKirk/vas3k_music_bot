@@ -1,5 +1,6 @@
 package dev.storozhenko.music
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.storozhenko.music.run.Bot
 import dev.storozhenko.music.run.Server
 import dev.storozhenko.music.services.SpotifyService
@@ -15,18 +16,20 @@ val spotifyCredentials = SpotifyCredentials(
 private val botToken = getEnv("TELEGRAM_API_TOKEN")
 private val botUsername = getEnv("TELEGRAM_BOT_USERNAME")
 private val tokenStoragePath = getEnv("TOKEN_STORAGE_PATH")
-
-private val whiteListChatsAndPlaylistNames = mapOf(
-    -1001430847921L to "Vas3k.Music",
-    138265855L to "Test"
-)
+private val allowedList = jacksonObjectMapper()
+    .readValue(
+        "allow_list.json".asResource(),
+        AllowedList::class.java
+    ).allowedEntities
+    .associateBy(AllowedEntity::chatId)
+    .mapValues { it.value.playlistPrefix }
 
 fun main() {
     val telegramBotsApi = TelegramBotsApi(DefaultBotSession::class.java)
     val tokenStorage = TokenStorage(tokenStoragePath)
     val spotifyService = SpotifyService(tokenStorage, spotifyCredentials)
     val server = Server(spotifyService)
-    telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService, whiteListChatsAndPlaylistNames))
+    telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService, allowedList))
     server.run()
 }
 
