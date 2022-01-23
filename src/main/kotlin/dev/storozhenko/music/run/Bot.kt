@@ -70,37 +70,23 @@ class Bot(
         }
 
         var initialMessage = update.message.text
-        val urlEntities = entities.filter { entity -> entity.type == "url" }
-        if (urlEntities.isEmpty()) {
-            return
-        }
-        var i = 1
-        val links = mutableListOf<String>()
-        for (entity in urlEntities) {
-            val odesilResponse = odesilService.detect(entity.text) ?: continue
-            if (entity.offset == 0 && entity.length == initialMessage.length) {
-                initialMessage = ""
-            } else {
-                initialMessage = initialMessage.replace(entity.text, "[$i]")
-                i++
+        val links = entities
+            .filter { entity -> entity.type == "url" }
+            .mapNotNull(odesilService::detect)
+            .mapIndexed { index, odesilEntity ->
+                initialMessage = initialMessage.replace(
+                    odesilEntity.messageEntity.text,
+                    "[${index + 1}]"
+                )
+                updatePlaylist(entities, chatId, odesilEntity.odesilResponse)
+                mapOdesilResponse(odesilEntity.odesilResponse)
             }
-            links.add(mapOdesilResponse(odesilResponse))
-            coroutine.launch {
-                val addEntireAlbum = entities
-                    .any { it.type == "hashtag" && it.text == "#вплейлист" }
-                runCatching {
-                    spotifyService.updatePlaylist(
-                        getPlaylistNamePrefix(chatId),
-                        odesilResponse,
-                        addEntireAlbum
-                    )
-                }
-                    .onFailure { logger.error("Failed to update playlist:", it) }
-            }
-        }
+
+
         if (links.isEmpty()) {
             return
         }
+
         val from = update.message.from.userName
         val fromId = update.message.from.id
         val linksMessage = if (links.size == 1) {
@@ -108,11 +94,28 @@ class Bot(
         } else {
             links.mapIndexed { index, l -> "${index + 1}. $l" }.joinToString(separator = "\n\n")
         }
+
+        initialMessage = initialMessage.takeIf { it != "[1]" } ?: ""
         val message =
             "<b><a href=\"tg://user?id=$fromId\">@$from</a></b> написал(а): $initialMessage\n\n$linksMessage"
 
         execute(SendMessage(chatId.toString(), message).apply { enableHtml(true) })
         execute(DeleteMessage(chatId.toString(), update.message.messageId))
+    }
+
+    private fun updatePlaylist(entities: List<MessageEntity>, chatId: Long, odesilResponse: OdesilResponse) {
+        coroutine.launch {
+            val addEntireAlbum = entities
+                .any { it.type == "hashtag" && it.text == "#вплейлист" }
+            runCatching {
+                spotifyService.updatePlaylist(
+                    getPlaylistNamePrefix(chatId),
+                    odesilResponse,
+                    addEntireAlbum
+                )
+            }
+                .onFailure { logger.error("Failed to update playlist:", it) }
+        }
     }
 
     private suspend fun processCommands(update: Update, command: String) {

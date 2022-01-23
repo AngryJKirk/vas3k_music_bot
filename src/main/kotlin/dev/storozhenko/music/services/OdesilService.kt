@@ -2,8 +2,10 @@ package dev.storozhenko.music.services
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import dev.storozhenko.music.OdesilEntity
 import dev.storozhenko.music.OdesilResponse
 import dev.storozhenko.music.getLogger
+import org.telegram.telegrambots.meta.api.objects.MessageEntity
 import java.net.URI
 import java.net.URLEncoder
 import java.net.http.HttpClient
@@ -18,8 +20,8 @@ class OdesilService {
         configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
     }
 
-    fun detect(url: String): OdesilResponse? {
-        val encodedUrl = URLEncoder.encode(url, Charset.defaultCharset())
+    fun detect(messageEntity: MessageEntity): OdesilEntity? {
+        val encodedUrl = URLEncoder.encode(messageEntity.text, Charset.defaultCharset())
         val request = HttpRequest.newBuilder()
             .uri(URI.create("https://api.song.link/v1-alpha.1/links?url=$encodedUrl"))
             .build()
@@ -29,7 +31,8 @@ class OdesilService {
             logger.info("Odesil fail: $body")
             return null
         }
-        return objectMapper.readValue(body, OdesilResponse::class.java)
+        val odesilResponse = objectMapper.readValue(body, OdesilResponse::class.java)
+        return OdesilEntity(odesilResponse, messageEntity)
     }
 }
 

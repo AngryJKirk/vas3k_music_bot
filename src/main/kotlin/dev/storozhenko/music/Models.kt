@@ -1,6 +1,7 @@
 package dev.storozhenko.music
 
 import com.fasterxml.jackson.annotation.JsonProperty
+import org.telegram.telegrambots.meta.api.objects.MessageEntity
 
 data class SpotifyPlaylist(
     val id: String,
@@ -21,12 +22,20 @@ class OdesilPlatformData(
 
 class OdesilEntityData(
     @JsonProperty("title") val title: String?,
-    @JsonProperty("artistName") val artistName: String?
+    @JsonProperty("artistName") val artistName: String?,
+    @JsonProperty("thumbnailUrl") val thumbnailUrl: String?,
+    @JsonProperty("thumbnailWidth") val thumbnailWidth: Int?,
+    @JsonProperty("thumbnailHeight") val thumbnailHeight: Int?
 )
 
 class SpotifyCredentials(
     val clientId: String,
     val clientSecret: String,
     val redirectUri: String
+)
+
+class OdesilEntity(
+    val odesilResponse: OdesilResponse,
+    val messageEntity: MessageEntity
 )
 
