@@ -1,6 +1,5 @@
 package dev.storozhenko.music
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.storozhenko.music.run.Bot
 import dev.storozhenko.music.run.Server
 import dev.storozhenko.music.services.SpotifyService
@@ -16,7 +15,6 @@ val spotifyCredentials = SpotifyCredentials(
 private val botToken = getEnv("TELEGRAM_API_TOKEN")
 private val botUsername = getEnv("TELEGRAM_BOT_USERNAME")
 private val tokenStoragePath = getEnv("TOKEN_STORAGE_PATH")
-
 
 fun main() {
     val telegramBotsApi = TelegramBotsApi(DefaultBotSession::class.java)
