@@ -1,7 +1,9 @@
 package dev.storozhenko.music.run
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.storozhenko.music.AllowedEntity
+import dev.storozhenko.music.AllowedList
 import dev.storozhenko.music.OdesilResponse
-import dev.storozhenko.music.asResource
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.OdesilService
 import dev.storozhenko.music.services.SpotifyService
@@ -18,12 +20,19 @@ class Bot(
     private val token: String,
     private val botName: String,
     private val spotifyService: SpotifyService,
-    private val chatsAndPlaylistNames: Map<Long, String>
 ) : TelegramLongPollingBot() {
     private val odesilService = OdesilService()
     private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
-    private val helpMessage = "help_message.txt".asResource()
+    private val helpMessage = getResource("help_message.txt")
+    private val chatsAndPlaylistNames = jacksonObjectMapper()
+        .readValue(
+            getResource("allow_list.json"),
+            AllowedList::class.java
+        ).allowedEntities
+        .associateBy(AllowedEntity::chatId)
+        .mapValues { it.value.playlistPrefix }
+
     override fun getBotToken() = token
 
     override fun getBotUsername() = botName
@@ -200,5 +209,10 @@ class Bot(
         else {
             null
         }
+    }
+
+    private fun getResource(name: String): String {
+        return this::class.java.classLoader.getResource(name)?.readText()
+            ?: throw IllegalStateException("Resource $name is not found")
     }
 }

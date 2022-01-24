@@ -22,10 +22,7 @@ class OdesilPlatformData(
 
 class OdesilEntityData(
     @JsonProperty("title") val title: String?,
-    @JsonProperty("artistName") val artistName: String?,
-    @JsonProperty("thumbnailUrl") val thumbnailUrl: String?,
-    @JsonProperty("thumbnailWidth") val thumbnailWidth: Int?,
-    @JsonProperty("thumbnailHeight") val thumbnailHeight: Int?
+    @JsonProperty("artistName") val artistName: String?
 )
 
 class SpotifyCredentials(

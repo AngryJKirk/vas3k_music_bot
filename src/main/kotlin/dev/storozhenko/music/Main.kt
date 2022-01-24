@@ -16,20 +16,14 @@ val spotifyCredentials = SpotifyCredentials(
 private val botToken = getEnv("TELEGRAM_API_TOKEN")
 private val botUsername = getEnv("TELEGRAM_BOT_USERNAME")
 private val tokenStoragePath = getEnv("TOKEN_STORAGE_PATH")
-private val allowedList = jacksonObjectMapper()
-    .readValue(
-        "allow_list.json".asResource(),
-        AllowedList::class.java
-    ).allowedEntities
-    .associateBy(AllowedEntity::chatId)
-    .mapValues { it.value.playlistPrefix }
+
 
 fun main() {
     val telegramBotsApi = TelegramBotsApi(DefaultBotSession::class.java)
     val tokenStorage = TokenStorage(tokenStoragePath)
     val spotifyService = SpotifyService(tokenStorage, spotifyCredentials)
     val server = Server(spotifyService)
-    telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService, allowedList))
+    telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService))
     server.run()
 }
 
