@@ -35,13 +35,3 @@ class OdesilEntity(
     val odesilResponse: OdesilResponse,
     val messageEntity: MessageEntity
 )
-
-data class AllowedList(
-    @JsonProperty("allowed_list") val allowedEntities: List<AllowedEntity>
-)
-
-data class AllowedEntity(
-    @JsonProperty("chat_id") val chatId: Long,
-    @JsonProperty("playlist_prefix") val playlistPrefix: String
-)
-

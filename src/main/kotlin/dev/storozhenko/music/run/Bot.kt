@@ -1,8 +1,5 @@
 package dev.storozhenko.music.run
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import dev.storozhenko.music.AllowedEntity
-import dev.storozhenko.music.AllowedList
 import dev.storozhenko.music.OdesilResponse
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.OdesilService
@@ -25,13 +22,10 @@ class Bot(
     private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
     private val helpMessage = getResource("help_message.txt")
-    private val chatsAndPlaylistNames = jacksonObjectMapper()
-        .readValue(
-            getResource("allow_list.json"),
-            AllowedList::class.java
-        ).allowedEntities
-        .associateBy(AllowedEntity::chatId)
-        .mapValues { it.value.playlistPrefix }
+    private val chatsAndPlaylistNames = getResource("allow_list.txt")
+        .split("\n")
+        .map { line -> line.split(" ") }
+        .associate { (id, prefix) -> id.toLong() to prefix }
 
     override fun getBotToken() = token
 
