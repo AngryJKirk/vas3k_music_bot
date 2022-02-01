@@ -153,7 +153,7 @@ class Bot(
                 update.message.chatId.toString(), message
             ).apply {
                 enableHtml(true)
-
+                disableWebPagePreview()
                 replyToMessageId = update.message.messageId
             }
         )
