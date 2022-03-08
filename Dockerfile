@@ -15,4 +15,4 @@ FROM openjdk:17-jdk-slim
 
 COPY --from=build /app/target/vas3k_music.jar /usr/local/lib/vas3k_music.jar
 
-ENTRYPOINT ["java","-jar","/usr/local/lib/vas3k_music.jar"]
+ENTRYPOINT ["java","-Xmx32m","-jar","/usr/local/lib/vas3k_music.jar"]
