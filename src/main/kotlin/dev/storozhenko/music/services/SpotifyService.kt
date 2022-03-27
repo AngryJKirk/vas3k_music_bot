@@ -20,7 +20,7 @@ import java.util.Locale
 class SpotifyService(
     private val tokenStorage: TokenStorage,
     private val spotifyCredentials: SpotifyCredentials,
-    var client: SpotifyClientApi? = null,
+    private var client: SpotifyClientApi? = null,
 ) {
     private val logger = getLogger()
 
