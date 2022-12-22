@@ -1,7 +1,6 @@
 package dev.storozhenko.music.services
 
 import com.adamratzman.spotify.SpotifyApiOptions
-import com.adamratzman.spotify.SpotifyClientApi
 import com.adamratzman.spotify.models.Token
 import com.adamratzman.spotify.refreshSpotifyClientToken
 import dev.storozhenko.music.getLogger
@@ -9,7 +8,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
-import java.lang.IllegalStateException
 import kotlin.io.path.Path
 
 class TokenStorage(private val tokenStoragePath: String) {
