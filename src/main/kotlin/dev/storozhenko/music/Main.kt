@@ -26,5 +26,5 @@ fun main() {
 }
 
 private fun getEnv(envName: String): String {
-    return System.getenv()[envName] ?: throw IllegalStateException("$envName does not exist")
+    return System.getenv()[envName]?.takeIf(String::isNotBlank) ?: throw IllegalStateException("$envName does not exist or empty")
 }
