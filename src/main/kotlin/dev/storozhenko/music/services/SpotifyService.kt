@@ -44,11 +44,10 @@ class SpotifyService(
 
     fun getAuthUrl(): String {
         return getSpotifyAuthorizationUrl(
-            SpotifyScope.PLAYLIST_READ_PRIVATE,
-            SpotifyScope.PLAYLIST_MODIFY_PRIVATE,
-            SpotifyScope.PLAYLIST_MODIFY_PUBLIC,
-            SpotifyScope.PLAYLIST_MODIFY_PRIVATE,
-            SpotifyScope.PLAYLIST_READ_COLLABORATIVE,
+            SpotifyScope.PlaylistReadPrivate,
+            SpotifyScope.PlaylistModifyPrivate,
+            SpotifyScope.PlaylistModifyPublic,
+            SpotifyScope.PlaylistReadCollaborative,
             clientId = spotifyCredentials.clientId,
             redirectUri = spotifyCredentials.redirectUri
         )

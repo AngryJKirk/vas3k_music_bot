@@ -18,8 +18,8 @@
         <ktor.version>1.6.7</ktor.version>
         <logback_version>1.4.5</logback_version>
         <kotlinx-serialization-json-jvm.version>1.4.1</kotlinx-serialization-json-jvm.version>
-        <spotify-api-kotlin-jvm.version>3.8.8</spotify-api-kotlin-jvm.version>
-        <telegrambots.version>6.3.0</telegrambots.version>
+        <spotify-api-kotlin-jvm.version>4.0.0</spotify-api-kotlin-jvm.version>
+        <telegrambots.version>6.4.0</telegrambots.version>
         <jackson-module-kotlin.version>2.14.0</jackson-module-kotlin.version>
     </properties>
     <repositories>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>com.adamratzman</groupId>
             <artifactId>spotify-api-kotlin-jvm</artifactId>
-            <version>${spotify-api-kotlin-jvm.version}</version>
+            <version>4.0.0</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
