@@ -121,7 +121,7 @@ class SpotifyService(
             val mostPopular = getSpotifyClient()
                 .tracks
                 .getTracks(*trackIds)
-                .maxByOrNull { it?.popularity ?: 0 }
+                .maxByOrNull { it?.popularity ?: 0.0 }
 
             if (mostPopular != null) {
                 addTracks(mostPopular.id, currentPlaylist = currentPlaylist)
