@@ -56,7 +56,7 @@
         <dependency>
             <groupId>com.adamratzman</groupId>
             <artifactId>spotify-api-kotlin-jvm</artifactId>
-            <version>4.0.0</version>
+            <version>${spotify-api-kotlin-jvm.version}</version>
         </dependency>
         <dependency>
             <groupId>io.ktor</groupId>
