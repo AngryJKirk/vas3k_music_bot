@@ -21,7 +21,7 @@
         <kotlinx-serialization-json-jvm.version>1.4.1</kotlinx-serialization-json-jvm.version>
         <spotify-api-kotlin-jvm.version>4.1.3</spotify-api-kotlin-jvm.version>
         <telegrambots.version>7.7.1</telegrambots.version>
-        <jackson-module-kotlin.version>2.14.0</jackson-module-kotlin.version>
+        <jackson.version>2.17.2</jackson.version>
     </properties>
     <repositories>
         <repository>
@@ -91,7 +91,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-kotlin</artifactId>
-            <version>${jackson-module-kotlin.version}</version>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
     </dependencies>
 
