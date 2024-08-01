@@ -25,6 +25,7 @@ fun main() {
     val telegramClient = OkHttpTelegramClient(botToken)
     val bot = Bot(botUsername, spotifyService, telegramClient)
     telegramBotsApi.registerBot(botToken, bot)
+    telegramBotsApi.start()
     server.run()
 }
 
