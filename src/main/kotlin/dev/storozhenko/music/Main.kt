@@ -4,8 +4,8 @@ import dev.storozhenko.music.run.Bot
 import dev.storozhenko.music.run.Server
 import dev.storozhenko.music.services.SpotifyService
 import dev.storozhenko.music.services.TokenStorage
-import org.telegram.telegrambots.meta.TelegramBotsApi
-import org.telegram.telegrambots.updatesreceivers.DefaultBotSession
+import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient
+import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication
 
 val spotifyCredentials = SpotifyCredentials(
     getEnv("SPOTIFY_CLIENT_ID"),
@@ -17,11 +17,14 @@ private val botUsername = getEnv("TELEGRAM_BOT_USERNAME")
 private val tokenStoragePath = getEnv("TOKEN_STORAGE_PATH")
 
 fun main() {
-    val telegramBotsApi = TelegramBotsApi(DefaultBotSession::class.java)
+    val telegramBotsApi = TelegramBotsLongPollingApplication()
+
     val tokenStorage = TokenStorage(tokenStoragePath)
     val spotifyService = SpotifyService(tokenStorage, spotifyCredentials)
     val server = Server(spotifyService)
-    telegramBotsApi.registerBot(Bot(botToken, botUsername, spotifyService))
+    val telegramClient = OkHttpTelegramClient(botToken)
+    val bot = Bot(botUsername, spotifyService, telegramClient)
+    telegramBotsApi.registerBot(botToken, bot)
     server.run()
 }
 

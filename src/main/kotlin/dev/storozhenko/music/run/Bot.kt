@@ -7,17 +7,18 @@ import dev.storozhenko.music.services.SpotifyService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.MessageEntity
 import org.telegram.telegrambots.meta.api.objects.Update
+import org.telegram.telegrambots.meta.generics.TelegramClient
 
 class Bot(
-    private val token: String,
     private val botName: String,
     private val spotifyService: SpotifyService,
-) : TelegramLongPollingBot() {
+    private val telegramClient: TelegramClient
+) : LongPollingUpdateConsumer {
     private val odesilService = OdesilService()
     private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
@@ -27,11 +28,11 @@ class Bot(
         .map { line -> line.split(" ") }
         .associate { (id, prefix) -> id.toLong() to prefix }
 
-    override fun getBotToken() = token
+    override fun consume(updates: MutableList<Update>) {
+        updates.forEach(::consume)
+    }
 
-    override fun getBotUsername() = botName
-
-    override fun onUpdateReceived(update: Update) {
+    private fun consume(update: Update) {
         if (!update.hasMessage() || !update.message.hasText()) {
             return
         }
@@ -46,7 +47,7 @@ class Bot(
         }
 
         if (!spotifyService.isReady()) {
-            execute(
+            telegramClient.execute(
                 SendMessage(
                     chatId.toString(),
                     "Нет авторизации в spotify, пните разраба"
@@ -98,8 +99,8 @@ class Bot(
         val message =
             "<b><a href=\"tg://user?id=$fromId\">@$from</a></b> написал(а): $initialMessage\n\n$linksMessage"
 
-        execute(SendMessage(chatId.toString(), message).apply { enableHtml(true) })
-        execute(DeleteMessage(chatId.toString(), update.message.messageId))
+        telegramClient.execute(SendMessage(chatId.toString(), message).apply { enableHtml(true) })
+        telegramClient.execute(DeleteMessage(chatId.toString(), update.message.messageId))
     }
 
     private fun updatePlaylist(entities: List<MessageEntity>, chatId: Long, odesilResponse: OdesilResponse) {
@@ -126,13 +127,13 @@ class Bot(
     }
 
     private fun sendHelp(update: Update) {
-        execute(SendMessage(update.message.chatId.toString(), helpMessage))
+        telegramClient.execute(SendMessage(update.message.chatId.toString(), helpMessage))
     }
 
     private suspend fun sendCurrentPlaylist(update: Update) {
         val chatId = update.message.chatId
         val playlist = spotifyService.getCurrentPlaylist(getPlaylistNamePrefix(chatId))
-        execute(
+        telegramClient.execute(
             SendMessage(
                 chatId.toString(), "<a href=\"${playlist.url}\">${playlist.name}</a>"
             ).apply {
@@ -148,7 +149,7 @@ class Bot(
         val message = playlists.mapIndexed { i, p ->
             "${i + 1}. <a href=\"${p.url}\">${p.name}</a>"
         }.joinToString(separator = "\n")
-        execute(
+        telegramClient.execute(
             SendMessage(
                 update.message.chatId.toString(), message
             ).apply {
