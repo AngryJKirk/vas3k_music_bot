@@ -4,8 +4,10 @@ import dev.storozhenko.music.OdesilResponse
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.OdesilService
 import dev.storozhenko.music.services.SpotifyService
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -19,9 +21,12 @@ class Bot(
     private val spotifyService: SpotifyService,
     private val telegramClient: TelegramClient
 ) : LongPollingUpdateConsumer {
-    private val odesilService = OdesilService()
-    private val coroutine = CoroutineScope(Dispatchers.Default)
     private val logger = getLogger()
+    private val odesilService = OdesilService()
+    val handler = CoroutineExceptionHandler { _, exception ->
+        logger.error("Caught exception: $exception")
+    }
+    private val coroutine = CoroutineScope(Dispatchers.IO + SupervisorJob() + handler)
     private val helpMessage = getResource("help_message.txt")
     private val chatsAndPlaylistNames = getResource("allow_list.txt")
         .split("\n")
@@ -29,24 +34,29 @@ class Bot(
         .associate { (id, prefix) -> id.toLong() to prefix }
 
     override fun consume(updates: MutableList<Update>) {
+        logger.info("Got ${updates.size} updates")
         updates.forEach(::consume)
     }
 
     private fun consume(update: Update) {
         if (!update.hasMessage() || !update.message.hasText()) {
+            logger.info("Got an update without text")
             return
         }
 
         val chatId = update.message.chatId
         if (chatId !in chatsAndPlaylistNames) {
+            logger.info("Got an update from unauthorized chat")
             return
         }
 
         if (!update.message.hasEntities()) {
+            logger.info("Got an update with no entities")
             return
         }
 
         if (!spotifyService.isReady()) {
+            logger.info("Spotify service is not ready")
             telegramClient.execute(
                 SendMessage(
                     chatId.toString(),
@@ -59,6 +69,7 @@ class Bot(
         val command = getCommand(entities)
 
         if (command != null) {
+            logger.info("Processing command $command")
             coroutine.launch {
                 runCatching {
                     processCommands(update, command)
@@ -84,6 +95,7 @@ class Bot(
 
 
         if (links.isEmpty()) {
+            logger.info("No links from Odesil, returning")
             return
         }
 
@@ -99,15 +111,18 @@ class Bot(
         val message =
             "<b><a href=\"tg://user?id=$fromId\">@$from</a></b> написал(а): $initialMessage\n\n$linksMessage"
 
+        logger.info("Sending message: $message")
         telegramClient.execute(SendMessage(chatId.toString(), message).apply { enableHtml(true) })
+        logger.info("Deleting original message ${update.message.messageId}")
         telegramClient.execute(DeleteMessage(chatId.toString(), update.message.messageId))
     }
 
     private fun updatePlaylist(entities: List<MessageEntity>, chatId: Long, odesilResponse: OdesilResponse) {
         coroutine.launch {
-            val addEntireAlbum = entities
-                .any { it.type == "hashtag" && it.text == "#вплейлист" }
             runCatching {
+                logger.info("Updating playlist for $odesilResponse")
+                val addEntireAlbum = entities
+                    .any { it.type == "hashtag" && it.text == "#вплейлист" }
                 spotifyService.updatePlaylist(
                     getPlaylistNamePrefix(chatId),
                     odesilResponse,
@@ -127,10 +142,12 @@ class Bot(
     }
 
     private fun sendHelp(update: Update) {
+        logger.info("sending help")
         telegramClient.execute(SendMessage(update.message.chatId.toString(), helpMessage))
     }
 
     private suspend fun sendCurrentPlaylist(update: Update) {
+        logger.info("sending current playlist")
         val chatId = update.message.chatId
         val playlist = spotifyService.getCurrentPlaylist(getPlaylistNamePrefix(chatId))
         telegramClient.execute(
@@ -144,6 +161,7 @@ class Bot(
     }
 
     private suspend fun sendAllPlaylists(update: Update) {
+        logger.info("sending all playlists")
         val playlistNamePrefix = getPlaylistNamePrefix(update.message.chatId)
         val playlists = spotifyService.getAllPlaylists(playlistNamePrefix)
         val message = playlists.mapIndexed { i, p ->

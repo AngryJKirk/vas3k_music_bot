@@ -10,17 +10,17 @@ data class SpotifyPlaylist(
     val tracks: Set<String>?
 )
 
-class OdesilResponse(
+data class OdesilResponse(
     @JsonProperty("entityUniqueId") val entityUniqueId: String,
     @JsonProperty("linksByPlatform") val linksByPlatform: Map<String, OdesilPlatformData>,
     @JsonProperty("entitiesByUniqueId") val entitiesByUniqueId: Map<String, OdesilEntityData>
 )
 
-class OdesilPlatformData(
+data class OdesilPlatformData(
     @JsonProperty("url") val url: String
 )
 
-class OdesilEntityData(
+data class OdesilEntityData(
     @JsonProperty("title") val title: String?,
     @JsonProperty("artistName") val artistName: String?
 )
