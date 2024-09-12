@@ -35,7 +35,10 @@ class Bot(
 
     override fun consume(updates: MutableList<Update>) {
         logger.info("Got ${updates.size} updates")
-        updates.forEach(::consume)
+        updates.forEach {
+            runCatching { consume(it) }
+                .onFailure { e -> logger.error("Can not process update $it", e) }
+        }
     }
 
     private fun consume(update: Update) {
