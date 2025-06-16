@@ -4,6 +4,7 @@ import com.adamratzman.spotify.SpotifyUserAuthorization
 import dev.storozhenko.music.getLogger
 import dev.storozhenko.music.services.SpotifyService
 import io.ktor.server.application.Application
+import io.ktor.server.application.call
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.response.respondRedirect
