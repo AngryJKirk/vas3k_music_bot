@@ -25,7 +25,7 @@ class OdesilService {
         val request = HttpRequest.newBuilder()
             .uri(URI.create("https://api.song.link/v1-alpha.1/links?url=$encodedUrl"))
             .build()
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = retryRequest(request) ?: return null
         val body = response.body()
         if (response.statusCode() != 200) {
             logger.info("Odesil fail: $body")
@@ -33,6 +33,17 @@ class OdesilService {
         }
         val odesilResponse = objectMapper.readValue(body, OdesilResponse::class.java)
         return OdesilEntity(odesilResponse, messageEntity)
+    }
+
+    private fun retryRequest(request: HttpRequest): HttpResponse<String>? {
+        for (i in 0..5) {
+            try {
+                return client.send(request, HttpResponse.BodyHandlers.ofString())
+            } catch (e: Exception) {
+                logger.error("Exception occurred while trying to send request, retry number is $i", e)
+            }
+        }
+        return null
     }
 }
 
