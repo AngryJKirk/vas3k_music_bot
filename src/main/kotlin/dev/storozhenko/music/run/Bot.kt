@@ -14,12 +14,13 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage
 import org.telegram.telegrambots.meta.api.objects.MessageEntity
 import org.telegram.telegrambots.meta.api.objects.Update
+import org.telegram.telegrambots.meta.api.objects.User
 import org.telegram.telegrambots.meta.generics.TelegramClient
 
 class Bot(
     private val botName: String,
     private val spotifyService: SpotifyService,
-    private val telegramClient: TelegramClient
+    private val telegramClient: TelegramClient,
 ) : LongPollingUpdateConsumer {
     private val logger = getLogger()
     private val odesilService = OdesilService()
@@ -102,8 +103,7 @@ class Bot(
             return
         }
 
-        val from = update.message.from.userName
-        val fromId = update.message.from.id
+
         val linksMessage = if (links.size == 1) {
             links.first()
         } else {
@@ -112,7 +112,7 @@ class Bot(
 
         initialMessage = initialMessage.takeIf { it != "[1]" } ?: ""
         val message =
-            "<b><a href=\"tg://user?id=$fromId\">@$from</a></b> написал(а): $initialMessage\n\n$linksMessage"
+            "<b>${getUserLink(update.message.from)}</b> написал(а): $initialMessage\n\n$linksMessage"
 
         logger.info("Sending message: $message")
         telegramClient.execute(SendMessage(chatId.toString(), message).apply { enableHtml(true) })
@@ -230,5 +230,14 @@ class Bot(
     private fun getResource(name: String): String {
         return this::class.java.classLoader.getResource(name)?.readText()
             ?: throw IllegalStateException("Resource $name is not found")
+    }
+
+    private fun getUserLink(from: User): String {
+        return if (from.userName != null) {
+            "@${from.userName}"
+        } else {
+            val fullName = listOfNotNull(from.firstName, from.lastName).joinToString(" ")
+            "<a href=\"tg://user?id=${from.id}\">@$fullName</a>"
+        }
     }
 }

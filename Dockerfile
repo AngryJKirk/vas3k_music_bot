@@ -1,4 +1,4 @@
-FROM maven:3.8.4-openjdk-17-slim AS build
+FROM maven:3.9.7-eclipse-temurin-22-alpine AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY ./src ./src
 
 RUN mvn package -DskipTests
 
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:22-alpine
 
 COPY --from=build /app/target/vas3k_music.jar /usr/local/lib/vas3k_music.jar
 
